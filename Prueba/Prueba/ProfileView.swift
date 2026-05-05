@@ -6,26 +6,26 @@ struct ProfileView: View {
     @State private var editName = ""
     @State private var editBio = ""
     @State private var showingLogoutAlert = false
-    
+    @State private var notificationsEnabled = true
+    @State private var smartAlertsEnabled = true
+    @State private var standbyProtection = true
+
     var body: some View {
         NavigationStack {
-            ZStack {
-                AppTheme.background.ignoresSafeArea()
-                
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: 0) {
-                        profileHeader
-                        
-                        VStack(spacing: 20) {
-                            profileStats
-                            menuSections
-                        }
-                        .padding(.top, 24)
-                        .padding(.bottom, 100)
-                    }
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 24) {
+                    topTitle
+                    profileHeader
+                    profileStats
+                    preferencesSection
+                    menuSections
                 }
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
+                .padding(.bottom, 110)
             }
-            .navigationBarHidden(true)
+            .background(AppTheme.background.ignoresSafeArea())
+            .toolbar(.hidden, for: .navigationBar)
             .sheet(isPresented: $isEditing) {
                 editProfileSheet
             }
@@ -35,177 +35,181 @@ struct ProfileView: View {
                     appState.logout()
                 }
             } message: {
-                Text("Estas seguro de que quieres cerrar sesion?")
+                Text("Estas seguro de que quieres salir de tu panel de energia?")
             }
         }
     }
-    
-    // MARK: - Header
-    
+
+    private var topTitle: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Perfil / Control")
+                .font(AppTheme.display(38))
+                .foregroundStyle(AppTheme.textPrimary)
+            Text("Tu cuenta y tus automatizaciones en un solo lugar.")
+                .font(AppTheme.bodyFont)
+                .foregroundStyle(AppTheme.textSecondary)
+        }
+    }
+
     private var profileHeader: some View {
-        VStack(spacing: 0) {
-        ZStack(alignment: .bottom) {
-            // Background gradient
-            AppTheme.headerGradient
-                .frame(height: 200)
-                .clipShape(
-                    UnevenRoundedRectangle(
-                        bottomLeadingRadius: 32,
-                        bottomTrailingRadius: 32
-                    )
-                )
-            
-            VStack(spacing: 12) {
-                // Avatar
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(alignment: .top) {
                 ZStack {
                     Circle()
-                        .fill(AppTheme.cardBackground)
-                        .frame(width: 96, height: 96)
-                        .shadow(color: .black.opacity(0.15), radius: 10, y: 4)
-                    
-                    Text(appState.currentUser?.avatarInitials ?? "??")
-                        .font(.system(size: 32, weight: .bold))
-                        .foregroundStyle(AppTheme.primary)
+                        .fill(AppTheme.surfaceMuted)
+                        .frame(width: 82, height: 82)
+
+                    Text(appState.currentUser?.avatarInitials ?? "U")
+                        .font(AppTheme.title(26))
+                        .foregroundStyle(AppTheme.primaryDark)
                 }
-                .offset(y: 48)
+
+                Spacer()
+
+                Button {
+                    editName = appState.currentUser?.name ?? ""
+                    editBio = appState.currentUser?.bio ?? ""
+                    isEditing = true
+                } label: {
+                    Text("Editar")
+                        .font(AppTheme.captionFont)
+                        .foregroundStyle(AppTheme.primaryDark)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+                        .background(AppTheme.surfaceMuted)
+                        .clipShape(Capsule())
+                }
             }
-        }
-        .padding(.bottom, 56)
-        .overlay(alignment: .topTrailing) {
-            Button {
-                editName = appState.currentUser?.name ?? ""
-                editBio = appState.currentUser?.bio ?? ""
-                isEditing = true
-            } label: {
-                Image(systemName: "pencil")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(.white)
-                    .frame(width: 36, height: 36)
-                    .background(.white.opacity(0.2))
-                    .clipShape(Circle())
-            }
-            .padding(.trailing, 20)
-            .padding(.top, 56)
-        }
 
-        // Name and info below the avatar offset
-        VStack(spacing: 6) {
-            Text(appState.currentUser?.name ?? "Usuario")
-                .font(.system(size: 22, weight: .bold))
-                .foregroundStyle(AppTheme.textPrimary)
+            VStack(alignment: .leading, spacing: 6) {
+                Text(appState.currentUser?.name ?? "Usuario")
+                    .font(AppTheme.title(28))
+                    .foregroundStyle(AppTheme.textPrimary)
 
-            Text(appState.currentUser?.email ?? "")
-                .font(.subheadline)
-                .foregroundStyle(AppTheme.textSecondary)
-
-            if let bio = appState.currentUser?.bio, !bio.isEmpty {
-                Text(bio)
-                    .font(.caption)
+                Text(appState.currentUser?.email ?? "")
+                    .font(AppTheme.bodyFont)
                     .foregroundStyle(AppTheme.textSecondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 40)
-                    .padding(.top, 4)
+
+                if let bio = appState.currentUser?.bio, !bio.isEmpty {
+                    Text(bio)
+                        .font(AppTheme.bodyFont)
+                        .foregroundStyle(AppTheme.textSecondary)
+                        .padding(.top, 4)
+                }
             }
         }
-        }
+        .padding(24)
+        .editorialCard(fill: AppTheme.surfaceMuted, radius: 30)
     }
-    
-    // MARK: - Stats
-    
+
     private var profileStats: some View {
         HStack(spacing: 0) {
-            ProfileStatView(value: "24", label: "Proyectos")
-            Divider().frame(height: 40)
-            ProfileStatView(value: "156", label: "Tareas")
-            Divider().frame(height: 40)
-            ProfileStatView(value: "12", label: "Equipos")
+            ProfileStatView(value: "320", label: "Eco-puntos")
+            Divider().overlay(AppTheme.border)
+            ProfileStatView(value: "7", label: "Racha")
+            Divider().overlay(AppTheme.border)
+            ProfileStatView(value: "5", label: "Badges")
         }
-        .padding(.vertical, 16)
-        .background(AppTheme.cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .shadow(color: .black.opacity(0.04), radius: 6, y: 2)
-        .padding(.horizontal, 20)
+        .padding(.vertical, 14)
+        .editorialCard()
     }
-    
-    // MARK: - Menu Sections
-    
+
     private var menuSections: some View {
-        VStack(spacing: 16) {
-            // Account section
-            MenuSection(title: "Cuenta") {
-                MenuRow(icon: "person.fill", title: "Informacion Personal", color: AppTheme.primary)
-                MenuRow(icon: "bell.fill", title: "Notificaciones", color: AppTheme.accent)
-                MenuRow(icon: "lock.fill", title: "Privacidad y Seguridad", color: Color(hex: "7C3AED"))
+        VStack(spacing: 18) {
+            MenuSection(title: "Resumen") {
+                MenuRow(icon: "leaf.fill", title: "Habitos sostenibles", color: AppTheme.primary)
+                Divider().overlay(AppTheme.border).padding(.leading, 56)
+                MenuRow(icon: "chart.line.uptrend.xyaxis", title: "Impacto mensual", color: AppTheme.success)
+                Divider().overlay(AppTheme.border).padding(.leading, 56)
+                MenuRow(icon: "battery.75", title: "Reducir consumo en espera", color: AppTheme.primaryDark)
             }
-            
-            // Preferences section
-            MenuSection(title: "Preferencias") {
-                MenuRow(icon: "paintbrush.fill", title: "Apariencia", color: AppTheme.warning)
-                MenuRow(icon: "globe", title: "Idioma", color: AppTheme.success)
-                MenuRow(icon: "questionmark.circle.fill", title: "Ayuda y Soporte", color: AppTheme.textSecondary)
-            }
-            
-            // Logout
+
             Button {
                 showingLogoutAlert = true
             } label: {
                 HStack(spacing: 12) {
                     Image(systemName: "rectangle.portrait.and.arrow.right")
-                        .font(.system(size: 16))
+                        .font(.system(size: 15, weight: .medium))
                         .foregroundStyle(AppTheme.error)
-                        .frame(width: 36, height: 36)
-                        .background(AppTheme.error.opacity(0.1))
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                    
+                        .frame(width: 24)
+
                     Text("Cerrar Sesion")
-                        .font(.subheadline.weight(.medium))
+                        .font(AppTheme.bodyFont)
                         .foregroundStyle(AppTheme.error)
-                    
+
                     Spacer()
                 }
-                .padding(16)
-                .background(AppTheme.cardBackground)
-                .clipShape(RoundedRectangle(cornerRadius: 16))
-                .shadow(color: .black.opacity(0.04), radius: 6, y: 2)
+                .padding(18)
             }
-            .padding(.horizontal, 20)
+            .editorialCard()
         }
     }
-    
-    // MARK: - Edit Sheet
-    
+
+    private var preferencesSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Preferencias")
+                .font(AppTheme.captionFont)
+                .foregroundStyle(AppTheme.textSecondary)
+                .textCase(.uppercase)
+                .tracking(1.6)
+
+            VStack(spacing: 0) {
+                SettingsToggleRow(
+                    icon: "bell.fill",
+                    title: "Notificaciones motivacionales",
+                    color: AppTheme.primary,
+                    isOn: $notificationsEnabled
+                )
+                Divider().overlay(AppTheme.border).padding(.leading, 56)
+                SettingsToggleRow(
+                    icon: "bolt.badge.clock.fill",
+                    title: "Alertas en horas pico",
+                    color: AppTheme.warning,
+                    isOn: $smartAlertsEnabled
+                )
+                Divider().overlay(AppTheme.border).padding(.leading, 56)
+                SettingsToggleRow(
+                    icon: "powerplug.fill",
+                    title: "Proteccion contra standby",
+                    color: AppTheme.success,
+                    isOn: $standbyProtection
+                )
+            }
+            .editorialCard()
+        }
+    }
+
     private var editProfileSheet: some View {
         NavigationStack {
-            ZStack {
-                AppTheme.background.ignoresSafeArea()
-                
-                VStack(spacing: 20) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Nombre")
-                            .font(.caption.weight(.medium))
-                            .foregroundStyle(AppTheme.textSecondary)
-                        CustomTextField(icon: "person.fill", placeholder: "Tu nombre", text: $editName)
-                    }
-                    
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Bio")
-                            .font(.caption.weight(.medium))
-                            .foregroundStyle(AppTheme.textSecondary)
-                        TextEditor(text: $editBio)
-                            .frame(height: 100)
-                            .padding(12)
-                            .background(AppTheme.cardBackground)
-                            .clipShape(RoundedRectangle(cornerRadius: 14))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 14)
-                                    .stroke(AppTheme.primary.opacity(0.15), lineWidth: 1)
-                            )
-                    }
-                    
-                    Spacer()
+            VStack(spacing: 20) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Nombre")
+                        .font(AppTheme.captionFont)
+                        .foregroundStyle(AppTheme.textSecondary)
+                    CustomTextField(icon: "person", placeholder: "Tu nombre", text: $editName)
                 }
-                .padding(24)
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Bio")
+                        .font(AppTheme.captionFont)
+                        .foregroundStyle(AppTheme.textSecondary)
+                    TextEditor(text: $editBio)
+                        .font(AppTheme.bodyFont)
+                        .foregroundStyle(AppTheme.textPrimary)
+                        .frame(height: 120)
+                        .padding(12)
+                        .background(AppTheme.surface)
+                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                .stroke(AppTheme.border, lineWidth: 1)
+                        }
+                }
+
+                Spacer()
             }
+            .padding(24)
+            .background(AppTheme.background.ignoresSafeArea())
             .navigationTitle("Editar Perfil")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -225,19 +229,17 @@ struct ProfileView: View {
     }
 }
 
-// MARK: - Supporting Views
-
 struct ProfileStatView: View {
     let value: String
     let label: String
-    
+
     var body: some View {
         VStack(spacing: 4) {
             Text(value)
-                .font(.system(size: 20, weight: .bold))
+                .font(AppTheme.title(24))
                 .foregroundStyle(AppTheme.textPrimary)
             Text(label)
-                .font(.caption)
+                .font(AppTheme.captionFont)
                 .foregroundStyle(AppTheme.textSecondary)
         }
         .frame(maxWidth: .infinity)
@@ -247,23 +249,19 @@ struct ProfileStatView: View {
 struct MenuSection<Content: View>: View {
     let title: String
     @ViewBuilder let content: Content
-    
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        VStack(alignment: .leading, spacing: 10) {
             Text(title)
-                .font(.caption.weight(.semibold))
+                .font(AppTheme.captionFont)
                 .foregroundStyle(AppTheme.textSecondary)
                 .textCase(.uppercase)
-                .padding(.horizontal, 20)
-                .padding(.bottom, 8)
-            
+                .tracking(1.6)
+
             VStack(spacing: 0) {
                 content
             }
-            .background(AppTheme.cardBackground)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .shadow(color: .black.opacity(0.04), radius: 6, y: 2)
-            .padding(.horizontal, 20)
+            .editorialCard()
         }
     }
 }
@@ -272,29 +270,27 @@ struct MenuRow: View {
     let icon: String
     let title: String
     let color: Color
-    
+
     var body: some View {
         Button {} label: {
             HStack(spacing: 12) {
                 Image(systemName: icon)
-                    .font(.system(size: 14))
+                    .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(color)
-                    .frame(width: 34, height: 34)
-                    .background(color.opacity(0.1))
-                    .clipShape(RoundedRectangle(cornerRadius: 9))
-                
+                    .frame(width: 24)
+
                 Text(title)
-                    .font(.subheadline)
+                    .font(AppTheme.bodyFont)
                     .foregroundStyle(AppTheme.textPrimary)
-                
+
                 Spacer()
-                
-                Image(systemName: "chevron.right")
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(AppTheme.textSecondary.opacity(0.5))
+
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(AppTheme.textSecondary)
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 11)
+            .padding(.vertical, 12)
         }
     }
 }
