@@ -14,10 +14,10 @@ struct User: Identifiable, Codable {
     
     static let sample = User(
         id: UUID(),
-        name: "Carlos Rivera",
+        name: "Maya Rivera",
         email: "carlos@ejemplo.com",
         joinDate: Date(),
-        bio: "Desarrollador iOS apasionado por el diseno limpio."
+        bio: "Convirtiendo pequenos habitos en ahorro de energia real."
     )
 }
 
@@ -40,40 +40,43 @@ struct StatItem: Identifiable {
 
 @Observable
 class AppState {
-    var isAuthenticated = false
     var currentUser: User?
     var showingSignUp = false
     
+    var isAuthenticated: Bool {
+        currentUser != nil
+    }
+    
     func login(email: String, password: String) {
-        currentUser = User(
-            id: UUID(),
-            name: "Carlos Rivera",
-            email: email,
-            joinDate: Date(),
-            bio: "Desarrollador iOS apasionado por el diseno limpio."
-        )
         withAnimation(.spring(duration: 0.5)) {
-            isAuthenticated = true
+            currentUser = User(
+                id: UUID(),
+                name: "Maya Rivera",
+                email: email,
+                joinDate: Date(),
+                bio: "Convirtiendo pequenos habitos en ahorro de energia real."
+            )
+            showingSignUp = false
         }
     }
     
     func signUp(name: String, email: String, password: String) {
-        currentUser = User(
-            id: UUID(),
-            name: name,
-            email: email,
-            joinDate: Date(),
-            bio: ""
-        )
         withAnimation(.spring(duration: 0.5)) {
-            isAuthenticated = true
+            currentUser = User(
+                id: UUID(),
+                name: name,
+                email: email,
+                joinDate: Date(),
+                bio: ""
+            )
+            showingSignUp = false
         }
     }
     
     func logout() {
         withAnimation(.spring(duration: 0.5)) {
-            isAuthenticated = false
             currentUser = nil
+            showingSignUp = false
         }
     }
 }

@@ -1,39 +1,84 @@
 import SwiftUI
 
 enum AppTheme {
-    // Primary blues - soft pastels
-    static let primary = Color(hex: "6BA3F7")
-    static let primaryDark = Color(hex: "4A8AF5")
-    static let primaryLight = Color(hex: "A8CCFF")
-    static let accent = Color(hex: "7EC8E3")
+    static let primary = Color(hex: "4F6B3C")
+    static let primaryDark = Color(hex: "2F4A2F")
+    static let primaryLight = Color(hex: "93AA7B")
+    static let accent = Color(hex: "DCE6D2")
+    static let background = Color(hex: "F7F2E8")
+    static let surface = Color(hex: "FDFBF6")
+    static let surfaceMuted = Color(hex: "E8EDDF")
+    static let border = Color(hex: "D6CCBA")
+    static let textPrimary = Color(hex: "24281F")
+    static let textSecondary = Color(hex: "6E6B60")
+    static let textOnPrimary = Color(hex: "F7F2E8")
+    static let success = Color(hex: "738257")
+    static let warning = Color(hex: "AF8358")
+    static let error = Color(hex: "9C6857")
 
-    // Backgrounds - warm pastel blue tints
-    static let background = Color(hex: "EDF3FF")
-    static let cardBackground = Color(hex: "F8FAFF")
-    static let darkCard = Color(hex: "3B5998")
+    static let cornerRadius: CGFloat = 24
 
-    // Text
-    static let textPrimary = Color(hex: "2D3A4A")
-    static let textSecondary = Color(hex: "8E9BB3")
-    static let textOnPrimary = Color.white
+    static func display(_ size: CGFloat) -> Font {
+        .system(size: size, weight: .bold, design: .rounded)
+    }
 
-    // Status - pastel tones
-    static let success = Color(hex: "7DD3A8")
-    static let warning = Color(hex: "F7C97E")
-    static let error = Color(hex: "F28B8B")
+    static func title(_ size: CGFloat) -> Font {
+        .system(size: size, weight: .semibold, design: .rounded)
+    }
 
-    // Gradients - soft blue pastels
-    static let primaryGradient = LinearGradient(
-        colors: [Color(hex: "7EB6FF"), Color(hex: "5B9CF5"), Color(hex: "8EC5FC")],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
-    )
+    static let bodyFont = Font.system(size: 15, weight: .regular, design: .default)
+    static let captionFont = Font.system(size: 12, weight: .medium, design: .default)
+}
 
-    static let headerGradient = LinearGradient(
-        colors: [Color(hex: "89B4FA"), Color(hex: "6BA3F7"), Color(hex: "A8D4FF")],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
-    )
+struct EditorialCardModifier: ViewModifier {
+    var fill: Color = AppTheme.surface
+    var radius: CGFloat = AppTheme.cornerRadius
+
+    func body(content: Content) -> some View {
+        content
+            .background(fill)
+            .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: radius, style: .continuous)
+                    .stroke(AppTheme.border, lineWidth: 1)
+            }
+    }
+}
+
+struct EditorialPrimaryButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(AppTheme.title(16))
+            .foregroundStyle(AppTheme.textOnPrimary)
+            .frame(maxWidth: .infinity)
+            .frame(height: 54)
+            .background(configuration.isPressed ? AppTheme.primaryDark : AppTheme.primary)
+            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .animation(.easeInOut(duration: 0.18), value: configuration.isPressed)
+    }
+}
+
+struct EditorialSecondaryButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(AppTheme.title(15))
+            .foregroundStyle(AppTheme.textPrimary)
+            .frame(maxWidth: .infinity)
+            .frame(height: 48)
+            .background(configuration.isPressed ? AppTheme.surfaceMuted : AppTheme.surface)
+            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(AppTheme.border, lineWidth: 1)
+            }
+            .animation(.easeInOut(duration: 0.18), value: configuration.isPressed)
+    }
+}
+
+extension View {
+    func editorialCard(fill: Color = AppTheme.surface, radius: CGFloat = AppTheme.cornerRadius) -> some View {
+        modifier(EditorialCardModifier(fill: fill, radius: radius))
+    }
 }
 
 extension Color {

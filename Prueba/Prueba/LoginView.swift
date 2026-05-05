@@ -8,129 +8,128 @@ struct LoginView: View {
     @State private var isLoading = false
     @State private var shakeOffset: CGFloat = 0
     @FocusState private var focusedField: Field?
-    
+
     enum Field { case email, password }
-    
+
     var body: some View {
-        ZStack {
-            AppTheme.background.ignoresSafeArea()
-            
-            ScrollView {
-                VStack(spacing: 32) {
-                    Spacer().frame(height: 40)
-                    
-                    // Logo area
-                    VStack(spacing: 16) {
-                        ZStack {
-                            Circle()
-                                .fill(AppTheme.headerGradient)
-                                .frame(width: 80, height: 80)
-                            Image(systemName: "bolt.fill")
-                                .font(.system(size: 36))
-                                .foregroundStyle(.white)
-                        }
-                        
-                        Text("Bienvenido")
-                            .font(.system(size: 32, weight: .bold))
-                            .foregroundStyle(AppTheme.textPrimary)
-                        
-                        Text("Inicia sesion para continuar")
-                            .font(.subheadline)
-                            .foregroundStyle(AppTheme.textSecondary)
-                    }
-                    
-                    // Form
-                    VStack(spacing: 16) {
-                        CustomTextField(
-                            icon: "envelope.fill",
-                            placeholder: "Correo electronico",
-                            text: $email,
-                            isSecure: false
-                        )
-                        .focused($focusedField, equals: .email)
-                        .textInputAutocapitalization(.never)
-                        .keyboardType(.emailAddress)
-                        
-                        CustomTextField(
-                            icon: "lock.fill",
-                            placeholder: "Contrasena",
-                            text: $password,
-                            isSecure: !isPasswordVisible,
-                            trailingIcon: isPasswordVisible ? "eye.slash.fill" : "eye.fill",
-                            trailingAction: { isPasswordVisible.toggle() }
-                        )
-                        .focused($focusedField, equals: .password)
-                        
-                        HStack {
-                            Spacer()
-                            Button("Olvidaste tu contrasena?") {}
-                                .font(.caption)
-                                .foregroundStyle(AppTheme.primary)
-                        }
-                    }
-                    .padding(.horizontal, 24)
-                    .offset(x: shakeOffset)
-                    
-                    // Login button
-                    Button {
-                        login()
-                    } label: {
-                        HStack(spacing: 8) {
-                            if isLoading {
-                                ProgressView()
-                                    .tint(.white)
-                            }
-                            Text("Iniciar Sesion")
-                                .font(.headline)
-                        }
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 52)
-                        .background(AppTheme.primaryGradient)
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
-                        .shadow(color: AppTheme.primary.opacity(0.3), radius: 8, y: 4)
-                    }
-                    .padding(.horizontal, 24)
-                    .disabled(isLoading)
-                    
-                    // Divider
-                    HStack {
-                        Rectangle().fill(AppTheme.textSecondary.opacity(0.3)).frame(height: 1)
-                        Text("o continua con")
-                            .font(.caption)
-                            .foregroundStyle(AppTheme.textSecondary)
-                        Rectangle().fill(AppTheme.textSecondary.opacity(0.3)).frame(height: 1)
-                    }
-                    .padding(.horizontal, 24)
-                    
-                    // Social buttons
-                    HStack(spacing: 16) {
-                        SocialButton(icon: "apple.logo", label: "Apple")
-                        SocialButton(icon: "globe", label: "Google")
-                    }
-                    .padding(.horizontal, 24)
-                    
-                    Spacer()
-                    
-                    // Sign up link
-                    HStack(spacing: 4) {
-                        Text("No tienes cuenta?")
-                            .foregroundStyle(AppTheme.textSecondary)
-                        Button("Registrate") {
-                            withAnimation(.spring(duration: 0.4)) {
-                                appState.showingSignUp = true
-                            }
-                        }
-                        .fontWeight(.semibold)
-                        .foregroundStyle(AppTheme.primary)
-                    }
-                    .font(.subheadline)
-                    .padding(.bottom, 32)
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 28) {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Habitat")
+                        .font(AppTheme.captionFont)
+                        .textCase(.uppercase)
+                        .tracking(2)
+                        .foregroundStyle(AppTheme.textSecondary)
+
+                    Text("Energia serena para la vida diaria.")
+                        .font(AppTheme.display(42))
+                        .foregroundStyle(AppTheme.textPrimary)
+
+                    Text("Aprende, automatiza y reduce tu consumo con pasos simples.")
+                        .font(AppTheme.bodyFont)
+                        .foregroundStyle(AppTheme.textSecondary)
+                        .frame(maxWidth: 290, alignment: .leading)
                 }
+
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Acceso")
+                        .font(AppTheme.title(20))
+                        .foregroundStyle(AppTheme.textPrimary)
+
+                    CustomTextField(
+                        icon: "envelope",
+                        placeholder: "Correo electronico",
+                        text: $email,
+                        isSecure: false
+                    )
+                    .focused($focusedField, equals: .email)
+                    .textInputAutocapitalization(.never)
+                    .keyboardType(.emailAddress)
+
+                    CustomTextField(
+                        icon: "lock",
+                        placeholder: "Contrasena",
+                        text: $password,
+                        isSecure: !isPasswordVisible,
+                        trailingIcon: isPasswordVisible ? "eye.slash" : "eye",
+                        trailingAction: { isPasswordVisible.toggle() }
+                    )
+                    .focused($focusedField, equals: .password)
+
+                    HStack {
+                        Spacer()
+                        Button("Recuperar acceso") {}
+                            .font(AppTheme.captionFont)
+                            .foregroundStyle(AppTheme.primaryDark)
+                    }
+                }
+                .padding(22)
+                .editorialCard()
+                .offset(x: shakeOffset)
+
+                Button {
+                    login()
+                } label: {
+                    HStack(spacing: 8) {
+                        if isLoading {
+                            ProgressView()
+                                .tint(AppTheme.textOnPrimary)
+                        }
+                        Text("Entrar a mi energia")
+                    }
+                }
+                .buttonStyle(EditorialPrimaryButtonStyle())
+                .disabled(isLoading)
+
+                HStack {
+                    Rectangle().fill(AppTheme.border).frame(height: 1)
+                    Text("o continua con")
+                        .font(AppTheme.captionFont)
+                        .foregroundStyle(AppTheme.textSecondary)
+                    Rectangle().fill(AppTheme.border).frame(height: 1)
+                }
+
+                HStack(spacing: 12) {
+                    SocialButton(icon: "apple.logo", label: "Apple")
+                    SocialButton(icon: "bolt.shield", label: "Invitado")
+                }
+
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Notas")
+                        .font(AppTheme.captionFont)
+                        .textCase(.uppercase)
+                        .tracking(1.6)
+                        .foregroundStyle(AppTheme.textSecondary)
+                    Label("Detecta consumo oculto antes de que se vuelva costumbre", systemImage: "powerplug")
+                    Label("Recibe sugerencias para evitar horas pico", systemImage: "sun.max")
+                    Label("Convierte ahorro en rachas y logros semanales", systemImage: "battery.100.bolt")
+                }
+                .font(AppTheme.bodyFont)
+                .foregroundStyle(AppTheme.textSecondary)
+                .padding(22)
+                .editorialCard(fill: AppTheme.surfaceMuted)
+
+                HStack(spacing: 4) {
+                    Text("No tienes cuenta?")
+                        .foregroundStyle(AppTheme.textSecondary)
+                    Button("Crea tu plan") {
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            appState.showingSignUp = true
+                        }
+                    }
+                    .fontWeight(.semibold)
+                    .foregroundStyle(AppTheme.primaryDark)
+                }
+                .font(.subheadline)
+                .frame(maxWidth: .infinity)
+                .padding(.bottom, 24)
             }
+            .padding(.horizontal, 24)
+            .padding(.top, 28)
         }
+        .background(AppTheme.background.ignoresSafeArea())
     }
-    
+
     private func login() {
         focusedField = nil
         guard !email.isEmpty, !password.isEmpty else {
@@ -144,15 +143,12 @@ struct LoginView: View {
             }
             return
         }
+
         isLoading = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-            appState.login(email: email, password: password)
-            isLoading = false
-        }
+        appState.login(email: email, password: password)
+        isLoading = false
     }
 }
-
-// MARK: - Reusable Components
 
 struct CustomTextField: View {
     let icon: String
@@ -161,61 +157,57 @@ struct CustomTextField: View {
     var isSecure: Bool = false
     var trailingIcon: String? = nil
     var trailingAction: (() -> Void)? = nil
-    
+
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: icon)
-                .font(.system(size: 16))
-                .foregroundStyle(AppTheme.primary)
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(AppTheme.primaryDark)
                 .frame(width: 20)
-            
+
             if isSecure {
                 SecureField(placeholder, text: $text)
+                    .font(AppTheme.bodyFont)
+                    .foregroundStyle(AppTheme.textPrimary)
             } else {
                 TextField(placeholder, text: $text)
+                    .font(AppTheme.bodyFont)
+                    .foregroundStyle(AppTheme.textPrimary)
             }
-            
+
             if let trailingIcon, let trailingAction {
                 Button(action: trailingAction) {
                     Image(systemName: trailingIcon)
-                        .font(.system(size: 14))
+                        .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(AppTheme.textSecondary)
                 }
             }
         }
         .padding(.horizontal, 16)
-        .frame(height: 52)
-        .background(AppTheme.cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(AppTheme.primary.opacity(0.15), lineWidth: 1)
-        )
+        .frame(height: 54)
+        .background(AppTheme.surface)
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(AppTheme.border, lineWidth: 1)
+        }
     }
 }
 
 struct SocialButton: View {
     let icon: String
     let label: String
-    
+
     var body: some View {
         Button {} label: {
             HStack(spacing: 8) {
                 Image(systemName: icon)
-                    .font(.system(size: 18))
+                    .font(.system(size: 18, weight: .medium))
                 Text(label)
-                    .font(.subheadline.weight(.medium))
+                    .font(AppTheme.title(15))
             }
-            .foregroundStyle(AppTheme.textPrimary)
-            .frame(maxWidth: .infinity)
-            .frame(height: 48)
-            .background(AppTheme.cardBackground)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(AppTheme.textSecondary.opacity(0.2), lineWidth: 1)
-            )
         }
+        .buttonStyle(EditorialSecondaryButtonStyle())
     }
 }
 

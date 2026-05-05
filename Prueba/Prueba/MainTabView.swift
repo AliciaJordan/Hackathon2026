@@ -2,71 +2,44 @@ import SwiftUI
 
 struct MainTabView: View {
     @State private var selectedTab = 0
-    
+
     var body: some View {
-        ZStack(alignment: .bottom) {
-            TabView(selection: $selectedTab) {
-                HomeView()
-                    .tag(0)
-                
-                Text("") // Placeholder for Explore
-                    .tag(1)
-                
-                Text("") // Placeholder for Add
-                    .tag(2)
-                
-                ProfileView()
-                    .tag(3)
-                
-                SettingsView()
-                    .tag(4)
-            }
-            
-            // Custom Tab Bar
+        TabView(selection: $selectedTab) {
+            HomeView()
+                .tag(0)
+
+            ConsumptionView()
+                .tag(1)
+
+            MapView()
+                .tag(2)
+
+            ProfileView()
+                .tag(3)
+        }
+        .background(AppTheme.background.ignoresSafeArea())
+        .safeAreaInset(edge: .bottom, spacing: 0) {
             customTabBar
         }
     }
-    
+
     private var customTabBar: some View {
-        GeometryReader { geo in
-            VStack(spacing: 0) {
-                HStack(spacing: 0) {
-                    TabBarButton(icon: "house.fill", label: "Inicio", index: 0, selectedTab: $selectedTab)
-                    TabBarButton(icon: "magnifyingglass", label: "Explorar", index: 1, selectedTab: $selectedTab)
-
-                    // Center add button
-                    Button {
-                        // Add action
-                    } label: {
-                        ZStack {
-                            Circle()
-                                .fill(AppTheme.primaryGradient)
-                                .frame(width: 52, height: 52)
-                                .shadow(color: AppTheme.primary.opacity(0.3), radius: 10, y: 4)
-
-                            Image(systemName: "plus")
-                                .font(.system(size: 22, weight: .bold))
-                                .foregroundStyle(.white)
-                        }
-                        .offset(y: -10)
-                    }
-                    .frame(maxWidth: .infinity)
-
-                    TabBarButton(icon: "person.fill", label: "Perfil", index: 3, selectedTab: $selectedTab)
-                    TabBarButton(icon: "gearshape.fill", label: "Ajustes", index: 4, selectedTab: $selectedTab)
-                }
-                .padding(.horizontal, 8)
-                .padding(.top, 10)
-                .padding(.bottom, geo.safeAreaInsets.bottom > 0 ? geo.safeAreaInsets.bottom : 12)
-            }
-            .frame(maxHeight: .infinity, alignment: .bottom)
-            .background(alignment: .bottom) {
-                AppTheme.cardBackground
-                    .frame(height: 80 + geo.safeAreaInsets.bottom)
-                    .shadow(color: AppTheme.primary.opacity(0.08), radius: 16, y: -6)
-            }
-            .ignoresSafeArea(.container, edges: .bottom)
+        HStack(spacing: 0) {
+            TabBarButton(icon: "leaf.fill", label: "Inicio", index: 0, selectedTab: $selectedTab)
+            TabBarButton(icon: "bolt.fill", label: "Consumo", index: 1, selectedTab: $selectedTab)
+            TabBarButton(icon: "map.fill", label: "Mapa", index: 2, selectedTab: $selectedTab)
+            TabBarButton(icon: "slider.horizontal.3", label: "Perfil", index: 3, selectedTab: $selectedTab)
         }
+        .padding(.horizontal, 12)
+        .padding(.top, 12)
+        .padding(.bottom, 12)
+        .background(alignment: .top) {
+            Rectangle()
+                .fill(AppTheme.primaryLight.opacity(0.35))
+                .frame(height: 1)
+                .offset(y: -1)
+        }
+        .background(AppTheme.primary)
     }
 }
 
@@ -75,25 +48,32 @@ struct TabBarButton: View {
     let label: String
     let index: Int
     @Binding var selectedTab: Int
-    
+
     private var isSelected: Bool { selectedTab == index }
-    
+
     var body: some View {
         Button {
-            withAnimation(.spring(duration: 0.3)) {
+            withAnimation(.easeInOut(duration: 0.22)) {
                 selectedTab = index
             }
         } label: {
-            VStack(spacing: 4) {
+            VStack(spacing: 6) {
                 Image(systemName: icon)
-                    .font(.system(size: 20))
-                    .symbolEffect(.bounce, value: isSelected)
-                
+                    .font(.system(size: 18, weight: .medium))
                 Text(label)
-                    .font(.system(size: 10, weight: .medium))
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
             }
-            .foregroundStyle(isSelected ? AppTheme.primary : AppTheme.textSecondary.opacity(0.6))
+            .foregroundStyle(isSelected ? AppTheme.primaryDark : AppTheme.textOnPrimary)
             .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+            .padding(.horizontal, 4)
+            .background {
+                if isSelected {
+                    Capsule(style: .continuous)
+                        .fill(AppTheme.surface)
+                }
+            }
+            .clipShape(Capsule(style: .continuous))
         }
     }
 }
