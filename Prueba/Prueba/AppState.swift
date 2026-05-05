@@ -15,7 +15,7 @@ struct User: Identifiable, Codable {
     static let sample = User(
         id: UUID(),
         name: "Maya Rivera",
-        email: "carlos@ejemplo.com",
+        email: "maya@ejemplo.com",
         joinDate: Date(),
         bio: "Convirtiendo pequenos habitos en ahorro de energia real."
     )

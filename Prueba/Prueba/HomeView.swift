@@ -3,16 +3,12 @@ import SwiftUI
 struct HomeView: View {
     @Environment(AppState.self) private var appState
     @State private var selectedQuickAction: HomeQuickAction?
+    @State private var isShowingTutorialClass = false
     private let summaryStats: [StatItem] = [
-        StatItem(title: "Consumo", value: "12.4 kWh", icon: "bolt.fill", color: AppTheme.primaryDark),
+        StatItem(title: "Consumo", value: "7 kWh", icon: "bolt.fill", color: AppTheme.primaryDark),
         StatItem(title: "Eco-score", value: "84", icon: "leaf.fill", color: AppTheme.primary),
-        StatItem(title: "Ahorro", value: "$18", icon: "dollarsign.circle.fill", color: AppTheme.success),
+        StatItem(title: "Ahorro acumulado", value: "$18", icon: "dollarsign.circle.fill", color: AppTheme.success),
         StatItem(title: "Standby", value: "1.8 kWh", icon: "powerplug.fill", color: AppTheme.warning)
-    ]
-    private let tips: [ActivityItem] = [
-        ActivityItem(icon: "leaf.fill", title: "Subiste 6 puntos de eco-score hoy", subtitle: "Seguiste tu horario inteligente de climatizacion", time: "+6 XP", color: AppTheme.primary),
-        ActivityItem(icon: "bolt.badge.clock.fill", title: "Evita usar el horno a las 19:00", subtitle: "Ese tramo suele ser tu hora de mayor tarifa", time: "Ahorra 12%", color: AppTheme.warning),
-        ActivityItem(icon: "powerplug.fill", title: "Desconecta la consola por la noche", subtitle: "Consume energia en espera durante 7 horas", time: "0.4 kWh", color: AppTheme.error)
     ]
 
     var body: some View {
@@ -21,9 +17,7 @@ struct HomeView: View {
                 VStack(alignment: .leading, spacing: 28) {
                     headerSection
                     heroCard
-                    statsGrid
                     focusAndSavingsSection
-                    tipsSection
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 20)
@@ -36,12 +30,17 @@ struct HomeView: View {
                     .presentationDetents([.medium, .large])
                     .presentationDragIndicator(.visible)
             }
+            .sheet(isPresented: $isShowingTutorialClass) {
+                TutorialClassView()
+                    .presentationDetents([.large])
+                    .presentationDragIndicator(.visible)
+            }
         }
     }
 
     private var headerSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Habitat")
+            Text("Hábitat")
                 .font(AppTheme.captionFont)
                 .textCase(.uppercase)
                 .tracking(2)
@@ -70,11 +69,7 @@ struct HomeView: View {
                 .font(AppTheme.display(34))
                 .foregroundStyle(AppTheme.textPrimary)
 
-            HStack(spacing: 12) {
-                dashboardBadge(icon: "leaf", value: "84", label: "Eco-score")
-                dashboardBadge(icon: "sun.max", value: "7 dias", label: "Racha")
-                dashboardBadge(icon: "battery.100.bolt", value: "320 XP", label: "Puntos")
-            }
+            summaryStatsGrid
 
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
@@ -107,7 +102,7 @@ struct HomeView: View {
         .editorialCard(fill: AppTheme.surfaceMuted, radius: 32)
     }
 
-    private var statsGrid: some View {
+    private var summaryStatsGrid: some View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
             ForEach(summaryStats) { stat in
                 VStack(alignment: .leading, spacing: 18) {
@@ -127,101 +122,75 @@ struct HomeView: View {
                 }
                 .frame(maxWidth: .infinity, minHeight: 132, alignment: .topLeading)
                 .padding(18)
-                .editorialCard()
+                .editorialCard(fill: AppTheme.surface)
             }
         }
     }
 
     private var focusAndSavingsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
+            Button {
+                isShowingTutorialClass = true
+            } label: {
+                HStack(spacing: 16) {
+                    Image("default")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 42, height: 42)
+                        .padding(8)
+                        .background(AppTheme.surface)
+                        .clipShape(Circle())
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Clase del Ing. Palomar")
+                            .font(AppTheme.captionFont)
+                            .foregroundStyle(AppTheme.textOnPrimary.opacity(0.82))
+                            .textCase(.uppercase)
+                            .tracking(1.1)
+
+                        Text("Aprende qué es la energía")
+                            .font(AppTheme.title(19))
+                            .foregroundStyle(AppTheme.textOnPrimary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    Spacer(minLength: 0)
+
+                    Image(systemName: "arrow.right.circle.fill")
+                        .font(.system(size: 24, weight: .semibold))
+                        .foregroundStyle(AppTheme.surface)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 18)
+                .padding(.vertical, 16)
+                .background(
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [AppTheme.primary, AppTheme.primaryDark],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                )
+                .overlay {
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .stroke(AppTheme.primaryLight.opacity(0.45), lineWidth: 1)
+                }
+            }
+            .buttonStyle(.plain)
+
             Text("Quick actions")
                 .font(AppTheme.title(20))
                 .foregroundStyle(AppTheme.textPrimary)
 
-            quickActionButton(
-                title: "Lo que redujiste",
-                subtitle: "Ve el resumen del ahorro de hoy",
-                icon: "chart.line.downtrend.xyaxis"
-            ) {
-                selectedQuickAction = .reducedToday
-            }
-
-            quickActionButton(
-                title: "Como ahorrar mas",
-                subtitle: "Abre consejos y horarios utiles",
-                icon: "lightbulb.max.fill"
-            ) {
-                selectedQuickAction = .saveMore
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                quickActionTile(for: .energyBill)
+                quickActionTile(for: .reducedToday)
+                quickActionTile(for: .saveMore)
+                quickActionTile(for: .monthlyImpact)
             }
         }
-    }
-
-    private var tipsSection: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                Text("Sugerencias personalizadas")
-                    .font(AppTheme.title(20))
-                    .foregroundStyle(AppTheme.textPrimary)
-                Spacer()
-                Button("Ver mas") {}
-                    .font(AppTheme.captionFont)
-                    .foregroundStyle(AppTheme.primaryDark)
-            }
-
-            VStack(spacing: 0) {
-                ForEach(tips) { item in
-                    HStack(alignment: .top, spacing: 14) {
-                        Image(systemName: item.icon)
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundStyle(item.color)
-                            .frame(width: 24)
-
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(item.title)
-                                .font(AppTheme.title(16))
-                                .foregroundStyle(AppTheme.textPrimary)
-                            Text(item.subtitle)
-                                .font(AppTheme.bodyFont)
-                                .foregroundStyle(AppTheme.textSecondary)
-                        }
-
-                        Spacer()
-
-                        Text(item.time)
-                            .font(AppTheme.captionFont)
-                            .foregroundStyle(AppTheme.textSecondary)
-                    }
-                    .padding(.horizontal, 18)
-                    .padding(.vertical, 16)
-
-                    if item.id != tips.last?.id {
-                        Divider()
-                            .overlay(AppTheme.border)
-                            .padding(.leading, 56)
-                    }
-                }
-            }
-            .editorialCard()
-        }
-    }
-
-    private func dashboardBadge(icon: String, value: String, label: String) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Image(systemName: icon)
-                .font(.system(size: 15, weight: .medium))
-                .foregroundStyle(AppTheme.primaryDark)
-            Text(value)
-                .font(AppTheme.title(18))
-                .foregroundStyle(AppTheme.textPrimary)
-            Text(label)
-                .font(AppTheme.captionFont)
-                .foregroundStyle(AppTheme.textSecondary)
-                .textCase(.uppercase)
-                .tracking(1)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(14)
-        .editorialCard(fill: AppTheme.surface)
     }
 
     private func compactInsight(icon: String, text: String) -> some View {
@@ -237,42 +206,112 @@ struct HomeView: View {
         .clipShape(Capsule())
     }
 
-    private func quickActionButton(title: String, subtitle: String, icon: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 12) {
-                Image(systemName: icon)
-                    .font(.system(size: 17, weight: .medium))
-                    .foregroundStyle(AppTheme.primaryDark)
-                    .frame(width: 22)
+    private func quickActionTile(for action: HomeQuickAction) -> some View {
+        Button {
+            selectedQuickAction = action
+        } label: {
+            VStack(alignment: .leading, spacing: 14) {
+                Image(systemName: action.icon)
+                    .font(.system(size: 20, weight: .medium))
+                    .foregroundStyle(action.iconColor)
+                    .frame(width: 28, height: 28)
 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(title)
-                        .font(AppTheme.title(16))
-                        .foregroundStyle(AppTheme.textPrimary)
-                    Text(subtitle)
-                        .font(AppTheme.bodyFont)
-                        .foregroundStyle(AppTheme.textSecondary)
-                }
+                Spacer(minLength: 0)
 
-                Spacer()
+                Text(action.title)
+                    .font(AppTheme.title(18))
+                    .foregroundStyle(AppTheme.textPrimary)
 
-                Image(systemName: "chevron.up")
-                    .font(.system(size: 12, weight: .semibold))
+                Text(action.subtitle)
+                    .font(AppTheme.captionFont)
                     .foregroundStyle(AppTheme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, minHeight: 150, alignment: .topLeading)
             .padding(18)
-            .editorialCard()
+            .background(action.cardFill)
+            .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                    .stroke(AppTheme.border, lineWidth: 1)
+            }
         }
         .buttonStyle(.plain)
     }
 }
 
 private enum HomeQuickAction: String, Identifiable {
+    case energyBill
     case reducedToday
     case saveMore
+    case monthlyImpact
 
     var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .energyBill:
+            "Recibo de energia"
+        case .reducedToday:
+            "Lo que redujiste"
+        case .saveMore:
+            "Como ahorrar mas"
+        case .monthlyImpact:
+            "Impacto mensual"
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .energyBill:
+            "Sube y revisa tu historial"
+        case .reducedToday:
+            "Resumen del ahorro"
+        case .saveMore:
+            "Consejos y horarios utiles"
+        case .monthlyImpact:
+            "Ahorros, CO2 y avance"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .energyBill:
+            "doc.text.magnifyingglass"
+        case .reducedToday:
+            "chart.line.downtrend.xyaxis"
+        case .saveMore:
+            "lightbulb.max.fill"
+        case .monthlyImpact:
+            "chart.line.uptrend.xyaxis"
+        }
+    }
+
+    var iconColor: Color {
+        switch self {
+        case .energyBill:
+            AppTheme.primaryDark
+        case .reducedToday:
+            AppTheme.success
+        case .saveMore:
+            AppTheme.warning
+        case .monthlyImpact:
+            AppTheme.primary
+        }
+    }
+
+    var cardFill: Color {
+        switch self {
+        case .energyBill:
+            AppTheme.surface
+        case .reducedToday:
+            AppTheme.surfaceMuted
+        case .saveMore:
+            AppTheme.surface
+        case .monthlyImpact:
+            AppTheme.surfaceMuted
+        }
+    }
 }
 
 private struct QuickActionSheet: View {
@@ -280,32 +319,57 @@ private struct QuickActionSheet: View {
     let action: HomeQuickAction
 
     var body: some View {
-        NavigationStack {
-            ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 18) {
-                    Text(title)
-                        .font(AppTheme.display(30))
-                        .foregroundStyle(AppTheme.textPrimary)
-
-                    Text(summary)
-                        .font(AppTheme.bodyFont)
-                        .foregroundStyle(AppTheme.textSecondary)
-
-                    VStack(alignment: .leading, spacing: 12) {
-                        ForEach(items, id: \.title) { item in
-                            detailRow(icon: item.icon, title: item.title, detail: item.detail)
+        switch action {
+        case .energyBill:
+            NavigationStack {
+                PDFEnergyView()
+                    .toolbar {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button("Cerrar") {
+                                dismiss()
+                            }
                         }
                     }
-                    .padding(20)
-                    .editorialCard(fill: cardFill)
-                }
-                .padding(20)
             }
-            .background(AppTheme.background.ignoresSafeArea())
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Cerrar") {
-                        dismiss()
+        case .monthlyImpact:
+            NavigationStack {
+                MonthlyImpactView()
+                    .toolbar {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button("Cerrar") {
+                                dismiss()
+                            }
+                        }
+                    }
+            }
+        case .reducedToday, .saveMore:
+            NavigationStack {
+                ScrollView(showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 18) {
+                        Text(title)
+                            .font(AppTheme.display(30))
+                            .foregroundStyle(AppTheme.textPrimary)
+
+                        Text(summary)
+                            .font(AppTheme.bodyFont)
+                            .foregroundStyle(AppTheme.textSecondary)
+
+                        VStack(alignment: .leading, spacing: 12) {
+                            ForEach(items, id: \.title) { item in
+                                detailRow(icon: item.icon, title: item.title, detail: item.detail)
+                            }
+                        }
+                        .padding(20)
+                        .editorialCard(fill: cardFill)
+                    }
+                    .padding(20)
+                }
+                .background(AppTheme.background.ignoresSafeArea())
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button("Cerrar") {
+                            dismiss()
+                        }
                     }
                 }
             }
@@ -314,33 +378,51 @@ private struct QuickActionSheet: View {
 
     private var title: String {
         switch action {
+        case .energyBill:
+            "Recibo de energia"
         case .reducedToday:
             "Lo que redujiste"
         case .saveMore:
             "Como ahorrar mas"
+        case .monthlyImpact:
+            "Impacto mensual"
         }
     }
 
     private var summary: String {
         switch action {
+        case .energyBill:
+            "Carga tus recibos, revisa el total pagado y compara tu consumo por periodo."
         case .reducedToday:
             "Tu automatizacion nocturna ya redujo 18% del consumo en espera y evito picos de uso en la noche."
         case .saveMore:
             "Pequenos cambios en horario, aparatos y monitoreo ayudan a mantener tu consumo en escalones mas baratos."
+        case .monthlyImpact:
+            "Sigue tus ahorros acumulados, el CO2 evitado y el avance de tu eco-score del mes."
         }
     }
 
     private var cardFill: Color {
         switch action {
+        case .energyBill:
+            AppTheme.surface
         case .reducedToday:
             AppTheme.surface
         case .saveMore:
+            AppTheme.surfaceMuted
+        case .monthlyImpact:
             AppTheme.surfaceMuted
         }
     }
 
     private var items: [(icon: String, title: String, detail: String)] {
         switch action {
+        case .energyBill:
+            [
+                ("doc.text.fill", "Carga PDF", "Importa tu recibo de CFE y guarda el periodo automaticamente."),
+                ("pencil.line", "Corrige datos", "Edita kWh, total y periodo si el parser necesita ajustes."),
+                ("chart.bar.fill", "Historial", "Compara periodos y detecta picos en tu consumo.")
+            ]
         case .reducedToday:
             [
                 ("powerplug.fill", "Standby recortado", "3 dispositivos dejaron de consumir en espera."),
@@ -353,6 +435,13 @@ private struct QuickActionSheet: View {
                 ("chart.bar.fill", "Controla excedentes", "Mantente en basico e intermedio para evitar el escalon mas caro."),
                 ("snowflake", "Refrigerador", "Alejalo del calor y revisa que el empaque cierre bien."),
                 ("powerplug.fill", "Aparatos vampiro", "Desconecta cargadores, microondas, cafeteras y consolas sin uso.")
+            ]
+        case .monthlyImpact:
+            [
+                ("leaf.fill", "CO2 evitado", "Visualiza el impacto ambiental positivo de tus cambios."),
+                ("bolt.fill", "Energia ahorrada", "Consulta los kWh reducidos a lo largo del mes."),
+                ("dollarsign.circle.fill", "Ahorro economico", "Relaciona tus habitos con pesos ahorrados."),
+                ("chart.line.uptrend.xyaxis", "Tendencia semanal", "Compara tu progreso por semana en una sola vista.")
             ]
         }
     }

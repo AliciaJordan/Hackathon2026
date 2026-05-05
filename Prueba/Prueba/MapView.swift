@@ -113,18 +113,6 @@ struct MapView: View {
             }
 
             VStack(alignment: .trailing, spacing: 8) {
-                mapLegend
-                Button {
-                    showingReportForm = true
-                } label: {
-                    Label("Nuevo reporte", systemImage: "plus.bubble.fill")
-                        .font(AppTheme.captionFont)
-                        .foregroundStyle(AppTheme.textOnPrimary)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 10)
-                        .background(AppTheme.primaryDark)
-                        .clipShape(Capsule())
-                }
                 Button {
                     withAnimation(.easeInOut(duration: 0.25)) {
                         selectedReport = nil
@@ -171,27 +159,12 @@ struct MapView: View {
         }
     }
 
-    private var mapLegend: some View {
-        HStack(spacing: 8) {
-            Circle()
-                .fill(AppTheme.primary.opacity(0.25))
-                .frame(width: 12, height: 12)
-            Text("Mayor densidad = color mas intenso")
-                .font(AppTheme.captionFont)
-                .foregroundStyle(AppTheme.textSecondary)
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(AppTheme.surface)
-        .clipShape(Capsule())
-    }
-
     private var communityCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Vista comunitaria")
                 .font(AppTheme.title(20))
                 .foregroundStyle(AppTheme.textPrimary)
-            Text("Toca un pin para leer un resumen del reporte. Las capas suaves muestran donde la comunidad concentra mas observaciones.")
+            Text("Toca un pin para leer un resumen del reporte y entender mejor lo que esta pasando en esa zona.")
                 .font(AppTheme.bodyFont)
                 .foregroundStyle(AppTheme.textSecondary)
         }
@@ -225,9 +198,13 @@ struct MapView: View {
                 .font(AppTheme.title(16))
                 .foregroundStyle(report.category == .outages ? AppTheme.error : AppTheme.primaryDark)
 
-            HStack(spacing: 12) {
-                summaryPill(title: report.category.title, color: report.category.color)
-                summaryPill(title: "Intensidad \(Int(report.intensity * 100))%", color: AppTheme.primary)
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                summaryMetricCard(title: "Categoria", value: report.category.title, color: report.category.color)
+                summaryMetricCard(title: "Intensidad", value: "\(Int(report.intensity * 100))%", color: AppTheme.primary)
+                summaryMetricCard(title: "Hogares", value: "\(report.affectedHomes)", color: AppTheme.warning)
+                summaryMetricCard(title: "Severidad", value: severityText(for: report), color: severityColor(for: report))
+                summaryMetricCard(title: "Coordenadas", value: coordinateText(for: report), color: AppTheme.primaryDark)
+                summaryMetricCard(title: "Enfoque sugerido", value: recommendedAction(for: report), color: AppTheme.success)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -254,14 +231,27 @@ struct MapView: View {
         }
     }
 
-    private func summaryPill(title: String, color: Color) -> some View {
-        Text(title)
-            .font(AppTheme.captionFont)
-            .foregroundStyle(color)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(color.opacity(0.10))
-            .clipShape(Capsule())
+    private func summaryMetricCard(title: String, value: String, color: Color) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(AppTheme.captionFont)
+                .foregroundStyle(AppTheme.textSecondary)
+                .textCase(.uppercase)
+                .tracking(1)
+
+            Text(value)
+                .font(AppTheme.title(16))
+                .foregroundStyle(AppTheme.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            RoundedRectangle(cornerRadius: 999, style: .continuous)
+                .fill(color.opacity(0.18))
+                .frame(width: 32, height: 6)
+        }
+        .frame(maxWidth: .infinity, minHeight: 110, alignment: .topLeading)
+        .padding(16)
+        .background(AppTheme.surfaceMuted)
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
     }
 
     private func reportStatus(for report: EnergyReport) -> String {
@@ -274,6 +264,45 @@ struct MapView: View {
             "Estado: infraestructura electrica en riesgo"
         case .general:
             "Estado: reporte comunitario"
+        }
+    }
+
+    private func severityText(for report: EnergyReport) -> String {
+        switch report.intensity {
+        case 0.85...:
+            "Alta"
+        case 0.65..<0.85:
+            "Media"
+        default:
+            "Baja"
+        }
+    }
+
+    private func severityColor(for report: EnergyReport) -> Color {
+        switch report.intensity {
+        case 0.85...:
+            AppTheme.error
+        case 0.65..<0.85:
+            AppTheme.warning
+        default:
+            AppTheme.success
+        }
+    }
+
+    private func coordinateText(for report: EnergyReport) -> String {
+        "\(String(format: "%.2f", report.latitude)), \(String(format: "%.2f", report.longitude))"
+    }
+
+    private func recommendedAction(for report: EnergyReport) -> String {
+        switch report.category {
+        case .outages:
+            "Seguimiento a continuidad"
+        case .highCosts:
+            "Revision de tarifa y consumo"
+        case .poorInfrastructure:
+            "Mantenimiento prioritario"
+        case .general:
+            "Monitoreo comunitario"
         }
     }
 }

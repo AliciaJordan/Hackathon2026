@@ -75,7 +75,7 @@ struct LoginView: View {
                             ProgressView()
                                 .tint(AppTheme.textOnPrimary)
                         }
-                        Text("Entrar a mi energia")
+                        Text("Entrar a mi hábitat")
                     }
                 }
                 .buttonStyle(EditorialPrimaryButtonStyle())
