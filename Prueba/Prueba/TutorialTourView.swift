@@ -1,3 +1,11 @@
+//
+//  TutorialTourView.swift
+//  Prueba
+//
+//  Created by CETYS Universidad  on 05/05/26.
+//
+
+
 import SwiftUI
 
 struct TutorialTourView: View {

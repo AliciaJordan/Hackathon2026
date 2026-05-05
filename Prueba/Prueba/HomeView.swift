@@ -2,16 +2,12 @@ import SwiftUI
 
 struct HomeView: View {
     @Environment(AppState.self) private var appState
+    @State private var selectedQuickAction: HomeQuickAction?
     private let summaryStats: [StatItem] = [
         StatItem(title: "Consumo", value: "12.4 kWh", icon: "bolt.fill", color: AppTheme.primaryDark),
         StatItem(title: "Eco-score", value: "84", icon: "leaf.fill", color: AppTheme.primary),
         StatItem(title: "Ahorro", value: "$18", icon: "dollarsign.circle.fill", color: AppTheme.success),
         StatItem(title: "Standby", value: "1.8 kWh", icon: "powerplug.fill", color: AppTheme.warning)
-    ]
-    private let quickActions: [(icon: String, title: String, detail: String)] = [
-        ("sun.max", "Evitar pico", "Mueve la lavadora a las 21:00"),
-        ("battery.100.bolt", "Modo ahorro", "Baja consumo fantasma esta noche"),
-        ("powerplug", "Apagar enchufes", "3 equipos siguen en espera")
     ]
     private let tips: [ActivityItem] = [
         ActivityItem(icon: "leaf.fill", title: "Subiste 6 puntos de eco-score hoy", subtitle: "Seguiste tu horario inteligente de climatizacion", time: "+6 XP", color: AppTheme.primary),
@@ -26,8 +22,7 @@ struct HomeView: View {
                     headerSection
                     heroCard
                     statsGrid
-                    dailyFocusCard
-                    actionsSection
+                    focusAndSavingsSection
                     tipsSection
                 }
                 .padding(.horizontal, 20)
@@ -36,6 +31,11 @@ struct HomeView: View {
             }
             .background(AppTheme.background.ignoresSafeArea())
             .toolbar(.hidden, for: .navigationBar)
+            .sheet(item: $selectedQuickAction) { action in
+                QuickActionSheet(action: action)
+                    .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.visible)
+            }
         }
     }
 
@@ -132,59 +132,26 @@ struct HomeView: View {
         }
     }
 
-    private var dailyFocusCard: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Text("Enfoque de hoy")
-                    .font(AppTheme.title(20))
-                    .foregroundStyle(AppTheme.textPrimary)
-                Spacer()
-                Text("2.7 kWh evitados")
-                    .font(AppTheme.captionFont)
-                    .foregroundStyle(AppTheme.primaryDark)
-            }
-
-            Text("Tu automatizacion nocturna ya redujo 18% del consumo en espera.")
-                .font(AppTheme.bodyFont)
-                .foregroundStyle(AppTheme.textSecondary)
-
-            HStack(spacing: 12) {
-                compactInsight(icon: "bolt.badge.clock", text: "Hora pico 18:00-21:00")
-                compactInsight(icon: "powerplug", text: "3 dispositivos en espera")
-            }
-        }
-        .padding(22)
-        .editorialCard()
-    }
-
-    private var actionsSection: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("Acciones recomendadas")
+    private var focusAndSavingsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Quick actions")
                 .font(AppTheme.title(20))
                 .foregroundStyle(AppTheme.textPrimary)
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
-                    ForEach(quickActions, id: \.title) { action in
-                        VStack(alignment: .leading, spacing: 18) {
-                            Image(systemName: action.icon)
-                                .font(.system(size: 20, weight: .medium))
-                                .foregroundStyle(AppTheme.primaryDark)
+            quickActionButton(
+                title: "Lo que redujiste",
+                subtitle: "Ve el resumen del ahorro de hoy",
+                icon: "chart.line.downtrend.xyaxis"
+            ) {
+                selectedQuickAction = .reducedToday
+            }
 
-                            Text(action.title)
-                                .font(AppTheme.title(22))
-                                .foregroundStyle(AppTheme.textPrimary)
-
-                            Text(action.detail)
-                                .font(AppTheme.bodyFont)
-                                .foregroundStyle(AppTheme.textSecondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                        .frame(width: 210, alignment: .leading)
-                        .padding(18)
-                        .editorialCard(fill: AppTheme.surface)
-                    }
-                }
+            quickActionButton(
+                title: "Como ahorrar mas",
+                subtitle: "Abre consejos y horarios utiles",
+                icon: "lightbulb.max.fill"
+            ) {
+                selectedQuickAction = .saveMore
             }
         }
     }
@@ -268,6 +235,144 @@ struct HomeView: View {
         .padding(.vertical, 10)
         .background(AppTheme.surfaceMuted)
         .clipShape(Capsule())
+    }
+
+    private func quickActionButton(title: String, subtitle: String, icon: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.system(size: 17, weight: .medium))
+                    .foregroundStyle(AppTheme.primaryDark)
+                    .frame(width: 22)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(AppTheme.title(16))
+                        .foregroundStyle(AppTheme.textPrimary)
+                    Text(subtitle)
+                        .font(AppTheme.bodyFont)
+                        .foregroundStyle(AppTheme.textSecondary)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.up")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(18)
+            .editorialCard()
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private enum HomeQuickAction: String, Identifiable {
+    case reducedToday
+    case saveMore
+
+    var id: String { rawValue }
+}
+
+private struct QuickActionSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    let action: HomeQuickAction
+
+    var body: some View {
+        NavigationStack {
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 18) {
+                    Text(title)
+                        .font(AppTheme.display(30))
+                        .foregroundStyle(AppTheme.textPrimary)
+
+                    Text(summary)
+                        .font(AppTheme.bodyFont)
+                        .foregroundStyle(AppTheme.textSecondary)
+
+                    VStack(alignment: .leading, spacing: 12) {
+                        ForEach(items, id: \.title) { item in
+                            detailRow(icon: item.icon, title: item.title, detail: item.detail)
+                        }
+                    }
+                    .padding(20)
+                    .editorialCard(fill: cardFill)
+                }
+                .padding(20)
+            }
+            .background(AppTheme.background.ignoresSafeArea())
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Cerrar") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+
+    private var title: String {
+        switch action {
+        case .reducedToday:
+            "Lo que redujiste"
+        case .saveMore:
+            "Como ahorrar mas"
+        }
+    }
+
+    private var summary: String {
+        switch action {
+        case .reducedToday:
+            "Tu automatizacion nocturna ya redujo 18% del consumo en espera y evito picos de uso en la noche."
+        case .saveMore:
+            "Pequenos cambios en horario, aparatos y monitoreo ayudan a mantener tu consumo en escalones mas baratos."
+        }
+    }
+
+    private var cardFill: Color {
+        switch action {
+        case .reducedToday:
+            AppTheme.surface
+        case .saveMore:
+            AppTheme.surfaceMuted
+        }
+    }
+
+    private var items: [(icon: String, title: String, detail: String)] {
+        switch action {
+        case .reducedToday:
+            [
+                ("powerplug.fill", "Standby recortado", "3 dispositivos dejaron de consumir en espera."),
+                ("bolt.badge.clock.fill", "Menos carga en hora pico", "Moviste consumo fuera del bloque de 16:00 a 22:00."),
+                ("leaf.fill", "Ahorro acumulado", "Tu ritmo de hoy sostiene una semana 9% mas eficiente.")
+            ]
+        case .saveMore:
+            [
+                ("clock.fill", "Horarios estrategicos", "Haz lavado o planchado antes de las 10:00 AM o despues de las 11:00 PM."),
+                ("chart.bar.fill", "Controla excedentes", "Mantente en basico e intermedio para evitar el escalon mas caro."),
+                ("snowflake", "Refrigerador", "Alejalo del calor y revisa que el empaque cierre bien."),
+                ("powerplug.fill", "Aparatos vampiro", "Desconecta cargadores, microondas, cafeteras y consolas sin uso.")
+            ]
+        }
+    }
+
+    private func detailRow(icon: String, title: String, detail: String) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 16, weight: .medium))
+                .foregroundStyle(AppTheme.primaryDark)
+                .frame(width: 20)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(AppTheme.title(16))
+                    .foregroundStyle(AppTheme.textPrimary)
+                Text(detail)
+                    .font(AppTheme.bodyFont)
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+        }
     }
 }
 

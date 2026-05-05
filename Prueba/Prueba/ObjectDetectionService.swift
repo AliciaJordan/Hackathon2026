@@ -3,7 +3,7 @@ import CoreVideo
 import UIKit
 import Vision
 
-struct DetectionResult: Identifiable {
+struct DetectionResult: Identifiable, Equatable {
     let id = UUID()
     let label: String
     let confidence: Float
@@ -13,6 +13,7 @@ struct DetectionResult: Identifiable {
 final class ObjectDetectionService {
     private let model: VNCoreMLModel
     private let classLabels = ["Fridge", "Oven", "TV"]
+    private let minimumConfidence: Float = 0.35
 
     init() throws {
         let configuration = MLModelConfiguration()
@@ -78,7 +79,7 @@ final class ObjectDetectionService {
     private func parseResults(_ results: [Any]?) -> [DetectionResult] {
         // Try standard object observations first (VNRecognizedObjectObservation)
         if let observations = results as? [VNRecognizedObjectObservation], !observations.isEmpty {
-            return observations.compactMap { observation -> DetectionResult? in
+            let detections = observations.compactMap { observation -> DetectionResult? in
                 guard let topLabel = observation.labels.first else { return nil }
                 return DetectionResult(
                     label: topLabel.identifier,
@@ -86,7 +87,7 @@ final class ObjectDetectionService {
                     boundingBox: observation.boundingBox
                 )
             }
-            .sorted { $0.confidence > $1.confidence }
+            return postProcess(detections)
         }
 
         // Handle CoreML multi-array outputs from pipeline models
@@ -102,8 +103,7 @@ final class ObjectDetectionService {
         var coordinatesArray: MLMultiArray?
 
         for observation in observations {
-            guard let featureValue = observation.featureValue as? MLFeatureValue,
-                  let multiArray = featureValue.multiArrayValue else { continue }
+            guard let multiArray = observation.featureValue.multiArrayValue else { continue }
 
             let name = observation.featureName
             if name == "confidence" {
@@ -117,7 +117,10 @@ final class ObjectDetectionService {
               let coordinates = coordinatesArray else { return [] }
 
         let numDetections = confidences.shape[0].intValue
-        let numClasses = classLabels.count
+        let availableClasses = confidences.shape.count > 1 ? confidences.shape[1].intValue : classLabels.count
+        let numClasses = min(classLabels.count, availableClasses)
+
+        guard numClasses > 0 else { return [] }
 
         var detections: [DetectionResult] = []
 
@@ -135,7 +138,7 @@ final class ObjectDetectionService {
                 }
             }
 
-            guard bestConfidence > 0.25 else { continue }
+            guard bestConfidence > minimumConfidence else { continue }
 
             // Coordinates are [centerX, centerY, width, height] normalized
             let cx = Double(truncating: coordinates[[NSNumber(value: i), NSNumber(value: 0)]])
@@ -155,7 +158,85 @@ final class ObjectDetectionService {
             ))
         }
 
-        return detections.sorted { $0.confidence > $1.confidence }
+        return postProcess(detections)
+    }
+
+    private func postProcess(_ detections: [DetectionResult]) -> [DetectionResult] {
+        let normalizedDetections = detections.compactMap { detection -> DetectionResult? in
+            guard let normalizedLabel = normalizeLabel(detection.label),
+                  detection.confidence >= minimumConfidence else {
+                return nil
+            }
+
+            return DetectionResult(
+                label: normalizedLabel,
+                confidence: detection.confidence,
+                boundingBox: expandedBoundingBox(for: detection.boundingBox)
+            )
+        }
+
+        return nonMaximumSuppressed(normalizedDetections)
+            .sorted { $0.confidence > $1.confidence }
+    }
+
+    private func normalizeLabel(_ label: String) -> String? {
+        let normalized = label.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+
+        switch normalized {
+        case "fridge", "refrigerator":
+            return "Fridge"
+        case "oven", "stove":
+            return "Oven"
+        case "tv", "television":
+            return "TV"
+        default:
+            return classLabels.first { $0.lowercased() == normalized }
+        }
+    }
+
+    private func expandedBoundingBox(for rect: CGRect) -> CGRect {
+        let horizontalInset = rect.width * -0.08
+        let verticalInset = rect.height * -0.12
+        let expanded = rect.insetBy(dx: horizontalInset, dy: verticalInset)
+
+        let clampedOriginX = max(0, expanded.origin.x)
+        let clampedOriginY = max(0, expanded.origin.y)
+        let maxWidth = min(1 - clampedOriginX, expanded.width)
+        let maxHeight = min(1 - clampedOriginY, expanded.height)
+
+        return CGRect(
+            x: clampedOriginX,
+            y: clampedOriginY,
+            width: max(0, maxWidth),
+            height: max(0, maxHeight)
+        )
+    }
+
+    private func nonMaximumSuppressed(_ detections: [DetectionResult]) -> [DetectionResult] {
+        let sortedDetections = detections.sorted { $0.confidence > $1.confidence }
+        var keptDetections: [DetectionResult] = []
+
+        for detection in sortedDetections {
+            let overlapsExisting = keptDetections.contains { kept in
+                kept.label == detection.label && intersectionOverUnion(kept.boundingBox, detection.boundingBox) > 0.45
+            }
+
+            if !overlapsExisting {
+                keptDetections.append(detection)
+            }
+        }
+
+        return keptDetections
+    }
+
+    private func intersectionOverUnion(_ lhs: CGRect, _ rhs: CGRect) -> CGFloat {
+        let intersection = lhs.intersection(rhs)
+        guard !intersection.isNull else { return 0 }
+
+        let intersectionArea = intersection.width * intersection.height
+        let unionArea = (lhs.width * lhs.height) + (rhs.width * rhs.height) - intersectionArea
+        guard unionArea > 0 else { return 0 }
+        return intersectionArea / unionArea
     }
 }
 
