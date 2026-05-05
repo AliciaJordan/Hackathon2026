@@ -4,6 +4,7 @@ import SwiftUI
 struct MapView: View {
     @State private var viewModel = EnergyMapViewModel()
     @State private var selectedReport: EnergyReport?
+    @State private var showingReportForm = false
     @State private var recenterToken = 0
 
     var body: some View {
@@ -14,7 +15,8 @@ struct MapView: View {
                     headerCard
                     filtersRow
                     mapCard
-                    if let selectedReport {
+                    actionsRow
+                    if let selectedReport = selectedReport ?? viewModel.selectedReport {
                         reportSummaryCard(report: selectedReport)
                             .transition(.move(edge: .bottom).combined(with: .opacity))
                     } else {
@@ -30,6 +32,21 @@ struct MapView: View {
             .toolbar(.hidden, for: .navigationBar)
             .animation(.easeInOut(duration: 0.25), value: selectedReport?.id)
             .animation(.easeInOut(duration: 0.2), value: viewModel.selectedCategory?.rawValue)
+            .sheet(isPresented: $showingReportForm) {
+                ReportFormSheet { state, situation, category in
+                    viewModel.addReport(state: state, situation: situation, category: category)
+                    selectedReport = viewModel.selectedReport
+                    recenterToken += 1
+                }
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+            }
+            .onChange(of: viewModel.selectedReport?.id) { _, _ in
+                selectedReport = viewModel.selectedReport
+            }
+            .onChange(of: selectedReport?.id) { _, _ in
+                viewModel.selectedReport = selectedReport
+            }
         }
     }
 
@@ -98,8 +115,20 @@ struct MapView: View {
             VStack(alignment: .trailing, spacing: 8) {
                 mapLegend
                 Button {
+                    showingReportForm = true
+                } label: {
+                    Label("Nuevo reporte", systemImage: "plus.bubble.fill")
+                        .font(AppTheme.captionFont)
+                        .foregroundStyle(AppTheme.textOnPrimary)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 10)
+                        .background(AppTheme.primaryDark)
+                        .clipShape(Capsule())
+                }
+                Button {
                     withAnimation(.easeInOut(duration: 0.25)) {
                         selectedReport = nil
+                        viewModel.selectedReport = nil
                         recenterToken += 1
                     }
                 } label: {
@@ -117,7 +146,28 @@ struct MapView: View {
         .onChange(of: viewModel.selectedCategory) { _, _ in
             if let selectedReport, !viewModel.filteredReports.contains(selectedReport) {
                 self.selectedReport = nil
+                viewModel.selectedReport = nil
             }
+        }
+    }
+
+    private var actionsRow: some View {
+        HStack(spacing: 12) {
+            Button {
+                showingReportForm = true
+            } label: {
+                Label("Reportar", systemImage: "square.and.pencil")
+            }
+            .buttonStyle(EditorialPrimaryButtonStyle())
+
+            Button {
+                selectedReport = nil
+                viewModel.selectedReport = nil
+                recenterToken += 1
+            } label: {
+                Label("Limpiar", systemImage: "xmark")
+            }
+            .buttonStyle(EditorialSecondaryButtonStyle())
         }
     }
 
@@ -171,6 +221,10 @@ struct MapView: View {
                 .font(AppTheme.bodyFont)
                 .foregroundStyle(AppTheme.textSecondary)
 
+            Text(reportStatus(for: report))
+                .font(AppTheme.title(16))
+                .foregroundStyle(report.category == .outages ? AppTheme.error : AppTheme.primaryDark)
+
             HStack(spacing: 12) {
                 summaryPill(title: report.category.title, color: report.category.color)
                 summaryPill(title: "Intensidad \(Int(report.intensity * 100))%", color: AppTheme.primary)
@@ -209,6 +263,19 @@ struct MapView: View {
             .background(color.opacity(0.10))
             .clipShape(Capsule())
     }
+
+    private func reportStatus(for report: EnergyReport) -> String {
+        switch report.category {
+        case .outages:
+            "Estado: sin luz reportada"
+        case .highCosts:
+            "Estado: reporte por costo elevado"
+        case .poorInfrastructure:
+            "Estado: infraestructura electrica en riesgo"
+        case .general:
+            "Estado: reporte comunitario"
+        }
+    }
 }
 
 private struct ReportsMapRepresentable: UIViewRepresentable {
@@ -233,25 +300,8 @@ private struct ReportsMapRepresentable: UIViewRepresentable {
 
     func updateUIView(_ mapView: MKMapView, context: Context) {
         context.coordinator.parent = self
-
-        mapView.removeAnnotations(mapView.annotations)
-        mapView.removeOverlays(mapView.overlays)
-
-        let annotations = reports.map { report -> ReportAnnotation in
-            let annotation = ReportAnnotation(report: report)
-            annotation.coordinate = CLLocationCoordinate2D(latitude: report.latitude, longitude: report.longitude)
-            annotation.title = report.title
-            annotation.subtitle = report.regionName
-            return annotation
-        }
-        mapView.addAnnotations(annotations)
-
-        let circles = overlays.map { overlay in
-            let circle = DensityCircle(center: CLLocationCoordinate2D(latitude: overlay.latitude, longitude: overlay.longitude), radius: overlay.radius)
-            circle.tintColor = UIColor(overlay.color.opacity(0.26))
-            return circle
-        }
-        mapView.addOverlays(circles)
+        context.coordinator.syncAnnotations(on: mapView, reports: reports)
+        context.coordinator.syncOverlays(on: mapView, overlays: overlays)
 
         if context.coordinator.lastRecenterToken != recenterToken {
             context.coordinator.lastRecenterToken = recenterToken
@@ -259,8 +309,9 @@ private struct ReportsMapRepresentable: UIViewRepresentable {
         }
 
         if let selectedReport {
-            if let annotation = annotations.first(where: { $0.report.id == selectedReport.id }) {
+            if let annotation = context.coordinator.annotationsByID[selectedReport.id] {
                 mapView.selectAnnotation(annotation, animated: true)
+                mapView.setCenter(annotation.coordinate, animated: true)
             }
         } else {
             mapView.selectedAnnotations.forEach { mapView.deselectAnnotation($0, animated: true) }
@@ -271,6 +322,8 @@ private struct ReportsMapRepresentable: UIViewRepresentable {
         var parent: ReportsMapRepresentable
         @Binding var selectedReport: EnergyReport?
         var lastRecenterToken = 0
+        var annotationsByID: [UUID: ReportAnnotation] = [:]
+        var overlaysByID: [String: DensityCircle] = [:]
 
         init(selectedReport: Binding<EnergyReport?>) {
             self.parent = ReportsMapRepresentable(
@@ -288,10 +341,11 @@ private struct ReportsMapRepresentable: UIViewRepresentable {
             let identifier = "ReportMarker"
             let view = mapView.dequeueReusableAnnotationView(withIdentifier: identifier) as? MKMarkerAnnotationView ?? MKMarkerAnnotationView(annotation: annotation, reuseIdentifier: identifier)
             view.annotation = annotation
-            view.canShowCallout = false
+            view.canShowCallout = true
             view.markerTintColor = UIColor(annotation.report.category.color)
             view.glyphImage = UIImage(systemName: annotation.report.category.icon)
             view.displayPriority = .required
+            view.rightCalloutAccessoryView = UIButton(type: .detailDisclosure)
             return view
         }
 
@@ -310,15 +364,69 @@ private struct ReportsMapRepresentable: UIViewRepresentable {
             selectedReport = annotation.report
         }
 
+        func mapView(_ mapView: MKMapView, annotationView view: MKAnnotationView, calloutAccessoryControlTapped control: UIControl) {
+            guard let annotation = view.annotation as? ReportAnnotation else { return }
+            selectedReport = annotation.report
+            mapView.setCenter(annotation.coordinate, animated: true)
+        }
+
         func mapView(_ mapView: MKMapView, didDeselect annotation: MKAnnotation) {
             guard annotation is ReportAnnotation else { return }
             selectedReport = nil
+        }
+
+        func syncAnnotations(on mapView: MKMapView, reports: [EnergyReport]) {
+            let incomingIDs = Set(reports.map(\.id))
+            let staleIDs = Set(annotationsByID.keys).subtracting(incomingIDs)
+            for id in staleIDs {
+                if let annotation = annotationsByID.removeValue(forKey: id) {
+                    mapView.removeAnnotation(annotation)
+                }
+            }
+
+            for report in reports {
+                if let annotation = annotationsByID[report.id] {
+                    annotation.report = report
+                    annotation.coordinate = CLLocationCoordinate2D(latitude: report.latitude, longitude: report.longitude)
+                    annotation.title = report.title
+                    annotation.subtitle = report.regionName
+                } else {
+                    let annotation = ReportAnnotation(report: report)
+                    annotation.coordinate = CLLocationCoordinate2D(latitude: report.latitude, longitude: report.longitude)
+                    annotation.title = report.title
+                    annotation.subtitle = report.regionName
+                    annotationsByID[report.id] = annotation
+                    mapView.addAnnotation(annotation)
+                }
+            }
+        }
+
+        func syncOverlays(on mapView: MKMapView, overlays: [EnergyRegionDensity]) {
+            let incomingIDs = Set(overlays.map(\.label))
+            let staleIDs = Set(overlaysByID.keys).subtracting(incomingIDs)
+            for id in staleIDs {
+                if let overlay = overlaysByID.removeValue(forKey: id) {
+                    mapView.removeOverlay(overlay)
+                }
+            }
+
+            for overlay in overlays {
+                if overlaysByID[overlay.label] == nil {
+                    let circle = DensityCircle(
+                        center: CLLocationCoordinate2D(latitude: overlay.latitude, longitude: overlay.longitude),
+                        radius: overlay.radius
+                    )
+                    circle.tintColor = UIColor(overlay.color.opacity(0.26))
+                    overlaysByID[overlay.label] = circle
+                    mapView.addOverlay(circle)
+                }
+            }
         }
     }
 }
 
 private final class ReportAnnotation: MKPointAnnotation {
-    let report: EnergyReport
+    var report: EnergyReport
 
     init(report: EnergyReport) {
         self.report = report
@@ -332,4 +440,54 @@ private final class DensityCircle: MKCircle {
 
 #Preview {
     MapView()
+}
+
+private struct ReportFormSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var state = ""
+    @State private var situation = ""
+    @State private var category: EnergyReportCategory = .outages
+
+    let onSubmit: (String, String, EnergyReportCategory) -> Void
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Ubicacion") {
+                    TextField("Estado", text: $state)
+                        .textInputAutocapitalization(.words)
+                }
+
+                Section("Situacion") {
+                    Picker("Tipo", selection: $category) {
+                        ForEach(EnergyReportCategory.allCases) { category in
+                            Text(category.title).tag(category)
+                        }
+                    }
+
+                    TextField("Describe que esta pasando", text: $situation, axis: .vertical)
+                        .lineLimit(4, reservesSpace: true)
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background(AppTheme.background)
+            .navigationTitle("Nuevo reporte")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancelar") {
+                        dismiss()
+                    }
+                }
+
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Guardar") {
+                        onSubmit(state, situation, category)
+                        dismiss()
+                    }
+                    .disabled(state.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || situation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+        }
+    }
 }
