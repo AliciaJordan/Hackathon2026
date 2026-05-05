@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct MainTabView: View {
-    @State private var selectedTab = 0
+    @Binding var selectedTab: Int
 
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -31,8 +31,8 @@ struct MainTabView: View {
             TabBarButton(icon: "slider.horizontal.3", label: "Perfil", index: 3, selectedTab: $selectedTab)
         }
         .padding(.horizontal, 12)
-        .padding(.top, 12)
-        .padding(.bottom, 12)
+        .padding(.top, 8)
+        .padding(.bottom, 16)
         .background(alignment: .top) {
             Rectangle()
                 .fill(AppTheme.primaryLight.opacity(0.35))
@@ -79,6 +79,6 @@ struct TabBarButton: View {
 }
 
 #Preview {
-    MainTabView()
+    MainTabView(selectedTab: .constant(0))
         .environment(AppState())
 }

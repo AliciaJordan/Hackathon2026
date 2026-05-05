@@ -62,6 +62,7 @@ class AppState {
     
     func signUp(name: String, email: String, password: String) {
         withAnimation(.spring(duration: 0.5)) {
+            UserDefaults.standard.set(false, forKey: "hasSeenTutorial")
             currentUser = User(
                 id: UUID(),
                 name: name,
