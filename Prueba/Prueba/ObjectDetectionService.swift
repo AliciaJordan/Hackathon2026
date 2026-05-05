@@ -16,7 +16,7 @@ final class ObjectDetectionService {
 
     init() throws {
         let configuration = MLModelConfiguration()
-        let coreMLModel = try objDetectorCDMXEnactus_720(configuration: configuration).model
+        let coreMLModel = try final_(configuration: configuration).model
         self.model = try VNCoreMLModel(for: coreMLModel)
     }
 
